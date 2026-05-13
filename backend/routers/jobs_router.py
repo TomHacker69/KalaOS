@@ -5,7 +5,10 @@ from typing import Any, Dict, Literal, Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from usecases.jobs import get_job, list_jobs, submit_job
+try:  # Runtime from backend/ working directory
+    from usecases.jobs import get_job, list_jobs, submit_job
+except ImportError:  # Package-style runtime
+    from backend.usecases.jobs import get_job, list_jobs, submit_job
 
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -58,4 +61,3 @@ def get_async_job(job_id: str):
 @router.get("", response_model=list[JobSubmitResponse], summary="List recent async jobs")
 def list_async_jobs(limit: int = Query(default=50, ge=1, le=200)):
     return list_jobs(limit=limit)
-
