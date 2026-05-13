@@ -60,5 +60,4 @@ def run_task(task_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             f"Unsupported task_type '{task_type}'. "
             f"Supported values: {', '.join(sorted(TASK_REGISTRY))}"
         )
-    return handler(payload or {})
-
+    return handler(payload)

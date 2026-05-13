@@ -78,7 +78,7 @@ def _process_one_job(job_id: str) -> None:
                 current.status = "completed"
                 current.completed_at = _utc_now_iso()
                 current.result = output
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         with _jobs_lock:
             current = _jobs.get(job_id)
             if current:
@@ -145,4 +145,3 @@ def list_jobs(limit: int = 50) -> list[Dict[str, Any]]:
         jobs = list(_jobs.values())
     jobs.sort(key=lambda j: j.created_at, reverse=True)
     return [j.to_dict() for j in jobs[:safe_limit]]
-
