@@ -73,6 +73,22 @@ KalaOS analyses text-based and visual art (lyrics, poetry, music, stories, and m
 └─────────────────────────────────────────┘
 ```
 
+### Phase A scalability foundations (implemented)
+
+- Added modular backend boundaries:
+  - `backend/routers/`
+  - `backend/usecases/`
+  - `backend/workers/`
+- Added async job API for heavy workloads:
+  - `POST /jobs/submit`
+  - `GET /jobs/{job_id}`
+  - `GET /jobs`
+- Added architecture guardrails and ADRs under `docs/architecture/`.
+- Added Redis and PostgreSQL services to `docker-compose.yml` for migration scaffolding.
+
+> Current implementation uses an in-process queue for jobs as a compatibility-first step.
+> Next phases can replace this queue with Redis/Celery/Temporal without breaking `/jobs/*` contracts.
+
 ---
 
 ## Getting Started
