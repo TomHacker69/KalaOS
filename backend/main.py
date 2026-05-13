@@ -91,6 +91,7 @@ from services.llm_service import (
 )
 import services.auth_service as auth_service
 import services.platform_service as platform_service
+from routers.jobs_router import router as jobs_router
 
 # Build the domain Literal dynamically from ART_DOMAINS so there is
 # only one source of truth for the allowed values.
@@ -113,6 +114,7 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+app.include_router(jobs_router)
 
 # Rate limiter — keyed by client IP.  Limits are configurable via env vars
 # (useful for lowering limits in production or raising them in tests).
@@ -3366,4 +3368,3 @@ def visual_ai_photo_edit(body: AiPhotoEditRequest):
         return apply_ai_photo_edit(body.image_url, body.operation, body.options)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-
