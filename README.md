@@ -134,8 +134,11 @@ pip install -r requirements.txt
 # 2. Pull a model (skip if already done)
 ollama pull llama3
 
-# 3. Start the API server
+# 3. Start the API server (Linux/macOS)
 KALA_SECRET=my-dev-secret uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# On Windows (PowerShell):
+$env:KALA_SECRET="my-dev-secret"; uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API is now available at **http://localhost:8000**.
