@@ -9,6 +9,7 @@ KalaOS is an AI-native art platform for creation, streaming, and distribution th
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
+  - [Environment Variables](#environment-variables)
   - [Running with Docker Compose (recommended)](#running-with-docker-compose-recommended)
   - [Running locally without Docker](#running-locally-without-docker)
 - [Authentication](#authentication)
@@ -93,6 +94,85 @@ KalaOS analyses text-based and visual art (lyrics, poetry, music, stories, and m
 
 ## Getting Started
 
+## Environment Variables
+
+KalaOS uses environment variables to configure authentication, CORS, database storage, email delivery, and external services. Most variables have sensible defaults for local development, while production deployments should explicitly configure security-related values.
+
+### Environment Variable Reference
+
+| Variable            | Required         | Default                                                         | Description                                                     |
+| ------------------- | ---------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| `KALA_SECRET`       | Yes (Production) | Generated automatically (Docker uses `change-me-in-production`) | Secret used to sign authentication and session tokens.          |
+| `KALA_CORS_ORIGINS` | Optional         | `*`                                                             | Comma-separated list of allowed frontend origins for CORS.      |
+| `KALA_DB_PATH`      | Optional         | `kalaos.db`                                                     | Path to the SQLite database used by the authentication service. |
+| `KALA_SMTP_HOST`    | Optional         | None                                                            | SMTP server hostname. Enables email delivery when configured.   |
+| `KALA_SMTP_PORT`    | Optional         | `587`                                                           | SMTP server port.                                               |
+| `KALA_SMTP_USER`    | Optional         | None                                                            | SMTP username or API key.                                       |
+| `KALA_SMTP_PASS`    | Optional         | None                                                            | SMTP password or API key.                                       |
+| `KALA_SMTP_FROM`    | Optional         | Sender email address                                            | Email address used as the sender for outgoing emails.           |
+| `KALA_APP_URL`      | Optional         | Local application URL                                           | Public URL used when generating password reset links.           |
+| `OLLAMA_HOST`       | Optional         | `http://localhost:11434`                                        | URL of the Ollama server used for local AI inference.           |
+
+---
+
+### Local Development
+
+KalaOS provides sensible defaults for most configuration options, allowing you to get started with minimal setup.
+
+For the best development experience, it is recommended to configure:
+
+* `KALA_SECRET` – keeps authentication sessions stable across application restarts.
+
+SMTP-related variables are only required if you want to test password reset emails.
+
+---
+
+### Production
+
+For production deployments, it is recommended to configure:
+
+* `KALA_SECRET`
+* `KALA_CORS_ORIGINS`
+* `KALA_APP_URL`
+* SMTP variables (if email delivery is enabled)
+* `OLLAMA_HOST` (if Ollama is hosted on a separate host)
+
+---
+
+### Example `.env`
+
+```env
+# Security
+KALA_SECRET=replace-with-a-long-random-secret
+
+# CORS
+KALA_CORS_ORIGINS=https://your-frontend.example.com
+
+# Database
+KALA_DB_PATH=kalaos.db
+
+# Ollama
+OLLAMA_HOST=http://localhost:11434
+
+# SMTP (optional)
+KALA_SMTP_HOST=
+KALA_SMTP_PORT=587
+KALA_SMTP_USER=
+KALA_SMTP_PASS=
+KALA_SMTP_FROM=
+KALA_APP_URL=https://your-frontend.example.com
+```
+
+---
+
+### Security Best Practices
+
+* Never commit `.env` files or secrets to version control.
+* Generate a strong, random value for `KALA_SECRET` before deploying to production.
+* Restrict `KALA_CORS_ORIGINS` to trusted frontend domains instead of using `*` in production.
+* Store sensitive values using your deployment platform's secret management system whenever possible.
+
+
 ### Running with Docker Compose (recommended)
 
 > Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine + Compose plugin.
@@ -122,6 +202,8 @@ Open `frontend/index.html` in your browser (or serve it with any static file ser
 
 ---
 
+
+
 ### Running locally without Docker
 
 **Prerequisites:** Python ≥ 3.11, [Ollama](https://ollama.com) installed and running.
@@ -143,6 +225,8 @@ The API is now available at **http://localhost:8000**.
 Open `frontend/index.html` directly in your browser (no build step required).
 
 ---
+
+...
 
 ## Authentication
 
