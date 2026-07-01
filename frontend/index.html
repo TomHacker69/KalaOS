@@ -40,6 +40,16 @@
   </div>
 </div>
 
+<!-- Session Restore Banner -->
+<div id="sessionRestoreBanner" class="install-banner hidden" role="alert" aria-live="polite">
+  <span class="install-icon" aria-hidden="true">🔄</span>
+  <span class="install-text">Your previous session has been restored. All your work is right where you left it.</span>
+  <div class="install-actions">
+    <button class="btn-sm btn-accent" onclick="dismissSessionRestoreBanner()">Got it</button>
+    <button class="btn-sm btn-ghost-sm" onclick="dismissSessionRestoreBanner()" aria-label="Dismiss">✕</button>
+  </div>
+</div>
+
 <!-- Auth Overlay -->
 <div id="authOverlay" class="auth-overlay" role="main" aria-label="Sign in to KalaOS">
   <div class="auth-bg" aria-hidden="true">
@@ -260,6 +270,12 @@
             </div>
             <hr class="dropdown-divider" />
             <button onclick="showProfileModal(); hide('userDropdown'); el('userMenuBtn').setAttribute('aria-expanded','false');" class="dropdown-item" role="menuitem">Edit Profile</button>
+            <div class="dropdown-item dropdown-toggle-wrap" role="menuitem">
+              <span class="dropdown-toggle-label">Session Restore</span>
+              <button class="session-restore-toggle" id="sessionRestoreToggle" onclick="toggleSessionRestoreSetting()" role="switch" aria-checked="true" title="Toggle automatic session restoration">
+                <span class="sr-toggle-thumb"></span>
+              </button>
+            </div>
             <button onclick="handleLogout()" class="dropdown-item danger" role="menuitem">Sign Out</button>
           </div>
         </div>
@@ -2997,6 +3013,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js" crossorigin="anonymous"></script>
+<script src="session-restore.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

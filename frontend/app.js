@@ -1183,6 +1183,11 @@ document.addEventListener("DOMContentLoaded", () => {
   _updateUserUI();
   _restoreSidebar();
 
+  // Initialize session restore (loads saved state before auth check)
+  if (typeof initSessionRestore === "function") {
+    initSessionRestore();
+  }
+
   // If a valid session exists, skip auth screen
   if (_authToken && _currentUser) {
     showApp();
@@ -6609,7 +6614,7 @@ async function getRoyaltyReport() {
     if (statusEl) statusEl.textContent = `✓ Total earnings: $${data.total_earnings}`;
     if (resultEl) { resultEl.textContent = JSON.stringify(data, null, 2); resultEl.classList.remove("hidden"); }
   } catch (err) { if (statusEl) statusEl.textContent = `Error: ${esc(err.message)}`; }
-
+}
 
 async function pcLoadAnalytics() {
   const platform = el("pcAnalyticsPlatform")?.value || "all";
