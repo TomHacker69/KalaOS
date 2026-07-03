@@ -364,6 +364,14 @@
           <span class="sidebar-label">Platform Connect</span>
         </button>
 
+        <!-- Templates Marketplace -->
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label">Marketplace</div>
+        <button class="sidebar-btn" id="templatesStudioBtn" onclick="switchStudio('templates')" role="tab" aria-selected="false">
+          <span class="sidebar-icon" aria-hidden="true">📐</span>
+          <span class="sidebar-label">Templates</span>
+        </button>
+
         <!-- Transform -->
         <div class="sidebar-divider"></div>
         <button class="sidebar-btn" id="transformSidebarBtn" onclick="openTransformModal()" title="Cross-Medium AI Transform" aria-label="Cross-Medium AI Transform">
@@ -2875,6 +2883,39 @@
       </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════
+         WORKSPACE TEMPLATES MARKETPLACE  📐
+         ═══════════════════════════════════════════ -->
+    <div id="templatesStudio" class="input-panel hidden" aria-label="Workspace Templates Marketplace">
+      <div class="studio-header">
+        <h2 class="studio-title">📐 Workspace Templates</h2>
+        <p class="studio-subtitle">Browse, preview, and apply pre-built workspace templates for any use case</p>
+      </div>
+
+      <!-- Active template indicator -->
+      <div id="activeTemplateIndicator" class="active-template-indicator"></div>
+
+      <!-- Search & Filter Bar -->
+      <div class="template-toolbar">
+        <div class="template-search-wrap">
+          <span class="template-search-icon" aria-hidden="true">🔍</span>
+          <input type="search" id="templateSearchInput" class="template-search-input" placeholder="Search templates by name, description, or tags…" autocomplete="off" aria-label="Search templates" />
+        </div>
+        <button class="btn-ghost template-clear-btn" onclick="clearTemplateFilters()" title="Clear all filters">✕ Clear Filters</button>
+      </div>
+
+      <!-- Category Tabs -->
+      <div class="template-categories" role="tablist" aria-label="Template categories">
+        <div id="templateCategoryList" class="template-category-list"></div>
+      </div>
+
+      <!-- Template Grid -->
+      <div id="templateGrid" class="template-grid"></div>
+
+      <!-- Status Messages -->
+      <div id="templateStatus" class="template-status hidden" role="status" aria-live="polite"></div>
+    </div><!-- /templatesStudio -->
+
     </main><!-- /app-workspace -->
 
     <!-- ── Right Panel: AI Writing Assistant + Pattern Intelligence ── -->
@@ -2937,6 +2978,31 @@
     </aside><!-- /appAiPanel -->
 
   </div><!-- /app-body -->
+
+  <!-- Template Preview Modal -->
+  <div id="templatePreviewModal" class="template-preview-modal hidden" role="dialog" aria-modal="true" aria-label="Template Preview">
+    <div class="template-preview-card">
+      <button class="template-preview-close" onclick="closeTemplatePreview()" aria-label="Close preview">✕</button>
+      <span class="template-preview-icon" id="tplPreviewIcon" aria-hidden="true">📐</span>
+      <h3 class="template-preview-name" id="tplPreviewName">Template Name</h3>
+      <div class="template-preview-category" id="tplPreviewCategory">Category</div>
+      <p class="template-preview-desc" id="tplPreviewDesc">Description goes here</p>
+      <div class="template-preview-section">
+        <span class="template-preview-label">Layout</span>
+        <span class="template-preview-value" id="tplPreviewLayout">side-by-side</span>
+        <span class="template-preview-color" id="tplPreviewColor" style="--preview-accent:#7c5af1"></span>
+      </div>
+      <div class="template-preview-section">
+        <span class="template-preview-label">Panels</span>
+        <span class="template-preview-value" id="tplPreviewPanels">Panel list</span>
+      </div>
+      <div class="template-preview-tags" id="tplPreviewTags"></div>
+      <div class="template-preview-actions">
+        <button class="template-preview-apply-btn" id="tplPreviewApplyBtn">✦ Apply Template</button>
+        <button class="btn-ghost" onclick="closeTemplatePreview()">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <div id="projectsModal" class="projects-modal-overlay hidden" role="dialog" aria-modal="true" aria-label="My Projects">
     <div class="projects-modal-card">
@@ -3015,5 +3081,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js" crossorigin="anonymous"></script>
 <script src="session-restore.js"></script>
 <script src="app.js"></script>
+<script src="templates.js"></script>
 </body>
 </html>

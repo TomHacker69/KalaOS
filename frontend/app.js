@@ -5986,6 +5986,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (_ds) _ds.classList.add("hidden");
     if (_dsb) { _dsb.classList.remove("active"); _dsb.setAttribute("aria-selected", "false"); }
     _prevSS(mode);
+
+    // Templates studio — initialise on first visit
+    if (mode === 'templates') {
+      const ts = el("templatesStudio");
+      if (ts) {
+        ts.classList.remove("hidden");
+        if (typeof initTemplateMarketplace === 'function') {
+          initTemplateMarketplace();
+          loadAppliedTemplate();
+        }
+      }
+    }
   };
 })();
 
