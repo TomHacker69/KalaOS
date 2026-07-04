@@ -376,8 +376,12 @@
           <span class="sidebar-label">AI Suggestions</span>
         </button>
 
-        <!-- Transform -->
+        <!-- Shortcuts & Transform -->
         <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" onclick="openShortcutManager()" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts">
+          <span class="sidebar-icon" aria-hidden="true">⌨️</span>
+          <span class="sidebar-label">Shortcuts</span>
+        </button>
         <button class="sidebar-btn" id="transformSidebarBtn" onclick="openTransformModal()" title="Cross-Medium AI Transform" aria-label="Cross-Medium AI Transform">
           <span class="sidebar-icon" aria-hidden="true">🔀</span>
           <span class="sidebar-label">Transform</span>
@@ -2988,6 +2992,20 @@
 
   </div><!-- /app-body -->
 
+  <!-- Keyboard Shortcut Manager Panel -->
+  <div id="ksPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Keyboard Shortcut Manager" onclick="if(event.target===this)closeShortcutManager()">
+    <div class="ks-modal">
+      <div class="ks-modal-header">
+        <span class="ks-modal-title">⌨️ Keyboard Shortcuts</span>
+        <div class="ks-modal-actions">
+          <button class="btn-ghost small" onclick="ksResetAll()" title="Reset all to defaults">↺ Reset all</button>
+          <button class="btn-icon-round" onclick="closeShortcutManager()" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div id="ksShortcutList" class="ks-shortcut-list" aria-live="polite"></div>
+    </div>
+  </div>
+
   <!-- AI Workspace Suggestions Panel -->
   <div id="wsSuggestionsPanel" class="ws-suggestions-overlay hidden" role="dialog" aria-modal="true" aria-label="AI Workspace Suggestions" onclick="if(event.target===this)closeWorkspaceSuggestions()">
     <div class="ws-suggestions-panel">
@@ -3107,5 +3125,6 @@
 <script src="app.js"></script>
 <script src="templates.js"></script>
 <script src="workspace_suggestions.js"></script>
+<script src="keyboard_shortcuts.js"></script>
 </body>
 </html>
