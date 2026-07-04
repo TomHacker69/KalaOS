@@ -8050,3 +8050,162 @@ body.focus-mode #artText {
 }
 
 .wsa-section { display: flex; flex-direction: column; gap: 0; }
+
+/* ═══════════════════════════════════════════════════════
+   Favorite Workspace System  (#40)
+═══════════════════════════════════════════════════════ */
+
+#wsfPanel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  z-index: 1080;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 6vh;
+}
+#wsfPanel.hidden { display: none; }
+
+.wsf-modal {
+  background: var(--surface, #1a1a2e);
+  border: 1px solid var(--border, #2a2a4a);
+  border-radius: 14px;
+  width: min(600px, 96vw);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+  overflow: hidden;
+}
+
+.wsf-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .85rem 1.2rem;
+  border-bottom: 1px solid var(--border, #2a2a4a);
+  flex-shrink: 0;
+}
+
+.wsf-modal-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text, #e2e8f4);
+}
+
+.wsf-content {
+  overflow-y: auto;
+  padding: .9rem 1.1rem 1.2rem;
+  flex: 1;
+}
+
+/* Empty state */
+.wsf-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-dim, #6b7280);
+}
+.wsf-empty-icon { font-size: 2.2rem; display: block; margin-bottom: .6rem; }
+.wsf-empty-hint { font-size: .82rem; margin-top: .3rem; }
+
+/* Favorites list */
+.wsf-list { display: flex; flex-direction: column; gap: .55rem; }
+
+.wsf-card {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  background: var(--surface-2, rgba(255,255,255,.04));
+  border: 1px solid var(--border, #2a2a4a);
+  border-radius: 10px;
+  padding: .7rem .9rem;
+  transition: border-color .15s, background .15s;
+}
+.wsf-card:hover {
+  border-color: var(--accent, #7c5af1);
+  background: rgba(124,90,241,.06);
+}
+
+.wsf-card-main { display: flex; flex-direction: column; gap: .18rem; min-width: 0; }
+
+.wsf-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  flex-wrap: wrap;
+}
+
+.wsf-card-name {
+  font-weight: 600;
+  font-size: .95rem;
+  color: var(--text, #e2e8f4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wsf-card-meta {
+  font-size: .75rem;
+  color: var(--text-dim, #6b7280);
+}
+
+.wsf-archived-badge {
+  font-size: .7rem;
+  background: rgba(255,200,0,.1);
+  color: #f0b429;
+  border: 1px solid rgba(240,180,41,.25);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.wsf-role-badge {
+  font-size: .7rem;
+  background: rgba(124,90,241,.15);
+  color: var(--accent, #7c5af1);
+  border-radius: 4px;
+  padding: 1px 7px;
+}
+
+/* Star button — used in favorites panel, sharing list cards, and detail header */
+.wsf-star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: .2rem .3rem;
+  border-radius: 6px;
+  color: var(--text-dim, #6b7280);
+  transition: color .15s, background .15s, transform .12s;
+  flex-shrink: 0;
+}
+.wsf-star-btn:hover {
+  color: #f0b429;
+  background: rgba(240,180,41,.1);
+  transform: scale(1.15);
+}
+.wsf-star-active { color: #f0b429 !important; }
+
+/* Star in detail header — slightly larger */
+.wsf-star-detail { font-size: 1.15rem; }
+
+/* Sort button injected into sharing panel header */
+.wsf-sort-btn { white-space: nowrap; }
+.wsf-sort-active {
+  color: #f0b429 !important;
+  border-color: rgba(240,180,41,.4) !important;
+}
+
+/* Separator between favorited and other cards when sort is active */
+.wsf-sep {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--text-dim, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: .5rem .1rem .2rem;
+  border-top: 1px solid var(--border, #2a2a4a);
+  margin-top: .2rem;
+}
