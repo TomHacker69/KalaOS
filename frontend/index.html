@@ -378,6 +378,10 @@
 
         <!-- Shortcuts & Transform -->
         <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" onclick="openWorkspaceHealth()" title="Workspace Health Score" aria-label="Workspace Health Score">
+          <span class="sidebar-icon" aria-hidden="true">🏥</span>
+          <span class="sidebar-label">Health</span>
+        </button>
         <button class="sidebar-btn" onclick="openWorkspaceFavorites()" title="Favorite Workspaces" aria-label="Favorite Workspaces">
           <span class="sidebar-icon" aria-hidden="true">⭐</span>
           <span class="sidebar-label">Favorites</span>
@@ -3024,6 +3028,17 @@
 
   </div><!-- /app-body -->
 
+  <!-- Workspace Health Score Panel -->
+  <div id="wshHealthPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Workspace Health Score" onclick="if(event.target===this)closeWorkspaceHealth()">
+    <div class="wsh-health-modal">
+      <div class="wsh-health-modal-header">
+        <span class="wsh-health-modal-title">🏥 Workspace Health Score</span>
+        <button class="btn-icon-round" onclick="closeWorkspaceHealth()" aria-label="Close">✕</button>
+      </div>
+      <div id="wshHealthContent" class="wsh-health-content"></div>
+    </div>
+  </div>
+
   <!-- Favorite Workspaces Panel -->
   <div id="wsfPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Favorite Workspaces" onclick="if(event.target===this)closeWorkspaceFavorites()">
     <div class="wsf-modal">
@@ -3222,6 +3237,7 @@
 <script src="templates.js"></script>
 <script src="workspace_suggestions.js"></script>
 <script src="workspace_sharing.js"></script>
+<script src="workspace_health.js"></script>
 <script src="workspace_favorites.js"></script>
 <script src="workspace_analytics.js"></script>
 <script src="workspace_search.js"></script>
