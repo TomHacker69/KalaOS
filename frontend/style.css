@@ -7153,3 +7153,106 @@ body.focus-mode #artText {
   transition: background .15s;
 }
 .wsh-revoke-btn:hover { background: rgba(226,50,112,.15); }
+
+/* ═══════════════════════════════════════════════════════
+   Workspace Archive Management  (Feature #47)
+═══════════════════════════════════════════════════════ */
+
+/* Tabs — Active / Archived */
+.wsh-tabs {
+  display: flex;
+  gap: .3rem;
+  margin-bottom: .9rem;
+  border-bottom: 1px solid var(--border, #2a2d4a);
+  padding-bottom: .4rem;
+}
+.wsh-tab {
+  background: none;
+  border: none;
+  color: var(--text-dim, #8892b0);
+  font-size: .83rem;
+  font-weight: 500;
+  padding: .3rem .7rem;
+  border-radius: var(--radius-sm, 8px) var(--radius-sm, 8px) 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  transition: color .15s, background .15s;
+}
+.wsh-tab:hover { color: var(--text, #e2e8f4); background: var(--surface-2, #1a1d35); }
+.wsh-tab-active { color: var(--accent, #7c5af1); font-weight: 600; }
+
+.wsh-tab-count {
+  background: var(--accent, #7c5af1);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: .05rem .38rem;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+.wsh-tab-count-archived {
+  background: var(--text-dim, #8892b0);
+}
+
+/* Archived workspace card variant */
+.wsh-workspace-archived {
+  opacity: .75;
+  border-style: dashed !important;
+}
+.wsh-workspace-archived:hover { opacity: 1; }
+
+.wsh-ws-name-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+/* Archived badge */
+.wsh-archived-badge {
+  font-size: .7rem;
+  font-weight: 600;
+  padding: .15rem .45rem;
+  border-radius: 20px;
+  background: rgba(148,163,184,.15);
+  color: var(--text-dim, #8892b0);
+  white-space: nowrap;
+}
+
+/* Card action buttons row */
+.wsh-ws-card-actions {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Danger zone strip inside detail view */
+.wsh-danger-zone {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+  padding: .55rem .75rem;
+  background: rgba(226,50,112,.06);
+  border: 1px solid rgba(226,50,112,.2);
+  border-radius: var(--radius-sm, 8px);
+  margin-bottom: .9rem;
+}
+
+/* Permanent delete button */
+.wsh-delete-btn {
+  padding: .3rem .75rem;
+  font-size: .8rem;
+  border-radius: var(--radius-sm, 8px);
+  background: none;
+  border: 1px solid var(--error, #e23270);
+  color: var(--error, #e23270);
+  cursor: pointer;
+  font-family: var(--font-ui, Inter, sans-serif);
+  transition: background .15s;
+}
+.wsh-delete-btn:hover { background: rgba(226,50,112,.12); }

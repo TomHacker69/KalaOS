@@ -59,6 +59,7 @@ function wshCreateWorkspace(name) {
     id: 'ws_' + Date.now().toString(36),
     name: name.trim(),
     createdAt: Date.now(),
+    archivedAt: null,
     members: [{ email, role: 'owner', joinedAt: Date.now() }],
   };
   const all = _wshLoad();
@@ -68,12 +69,21 @@ function wshCreateWorkspace(name) {
 }
 
 /**
- * Return all workspaces the current user is a member of.
+ * Return active (non-archived) workspaces the current user is a member of.
  */
 function wshMyWorkspaces() {
   const email = _wshCurrentUserEmail();
   if (!email) return [];
-  return _wshLoad().filter(ws => ws.members.some(m => m.email === email));
+  return _wshLoad().filter(ws => !ws.archivedAt && ws.members.some(m => m.email === email));
+}
+
+/**
+ * Return archived workspaces the current user owns.
+ */
+function wshArchivedWorkspaces() {
+  const email = _wshCurrentUserEmail();
+  if (!email) return [];
+  return _wshLoad().filter(ws => ws.archivedAt && ws.members.some(m => m.email === email && m.role === 'owner'));
 }
 
 /**
@@ -84,6 +94,58 @@ function wshGetWorkspace(id) {
   const ws = _wshLoad().find(w => w.id === id);
   if (!ws || !ws.members.some(m => m.email === email)) return null;
   return ws;
+}
+
+/* ──────────────────────────────────────────────
+   Archive / Restore / Delete
+────────────────────────────────────────────── */
+
+/**
+ * Archive a workspace (owner only). Sets archivedAt timestamp.
+ * @param {string} wsId
+ * @returns {{ ok: boolean, message: string }}
+ */
+function wshArchive(wsId) {
+  const all = _wshLoad();
+  const ws  = all.find(w => w.id === wsId);
+  if (!ws) return { ok: false, message: 'Workspace not found.' };
+  if (_wshMyRole(ws) !== 'owner') return { ok: false, message: 'Only the owner can archive a workspace.' };
+  if (ws.archivedAt) return { ok: false, message: 'Workspace is already archived.' };
+  ws.archivedAt = Date.now();
+  _wshSave(all);
+  return { ok: true, message: `"${ws.name}" archived.` };
+}
+
+/**
+ * Restore an archived workspace (owner only). Clears archivedAt.
+ * @param {string} wsId
+ * @returns {{ ok: boolean, message: string }}
+ */
+function wshRestore(wsId) {
+  const all = _wshLoad();
+  const ws  = all.find(w => w.id === wsId);
+  if (!ws) return { ok: false, message: 'Workspace not found.' };
+  if (_wshMyRole(ws) !== 'owner') return { ok: false, message: 'Only the owner can restore a workspace.' };
+  if (!ws.archivedAt) return { ok: false, message: 'Workspace is not archived.' };
+  ws.archivedAt = null;
+  _wshSave(all);
+  return { ok: true, message: `"${ws.name}" restored.` };
+}
+
+/**
+ * Permanently delete a workspace (owner only, must be archived first).
+ * @param {string} wsId
+ * @returns {{ ok: boolean, message: string }}
+ */
+function wshDeletePermanently(wsId) {
+  const all = _wshLoad();
+  const ws  = all.find(w => w.id === wsId);
+  if (!ws) return { ok: false, message: 'Workspace not found.' };
+  if (_wshMyRole(ws) !== 'owner') return { ok: false, message: 'Only the owner can delete a workspace.' };
+  if (!ws.archivedAt) return { ok: false, message: 'Archive the workspace before deleting it permanently.' };
+  const updated = all.filter(w => w.id !== wsId);
+  _wshSave(updated);
+  return { ok: true, message: `"${ws.name}" permanently deleted.` };
 }
 
 /* ──────────────────────────────────────────────
@@ -182,12 +244,14 @@ function wshRevoke(wsId, targetEmail) {
    UI State
 ────────────────────────────────────────────── */
 
-let _wshActiveWsId = null;
+let _wshActiveWsId  = null;
+let _wshListTab     = 'active'; // 'active' | 'archived'
 
 function openWorkspaceSharing() {
   const panel = document.getElementById('wshPanel');
   if (!panel) return;
   _wshActiveWsId = null;
+  _wshListTab    = 'active';
   _wshRenderWorkspaceList();
   panel.classList.remove('hidden');
 }
@@ -206,38 +270,75 @@ function _wshRenderWorkspaceList() {
   const container = document.getElementById('wshContent');
   if (!container) return;
 
-  const email = _wshCurrentUserEmail();
-  const workspaces = wshMyWorkspaces();
+  const active   = wshMyWorkspaces();
+  const archived = wshArchivedWorkspaces();
+  const showActive = _wshListTab === 'active';
+  const list = showActive ? active : archived;
 
   container.innerHTML = `
     <div class="wsh-section">
       <div class="wsh-section-header">
-        <span class="wsh-section-title">My Workspaces</span>
-        <button class="btn-primary wsh-btn-sm" onclick="_wshShowCreateForm()">＋ New Workspace</button>
+        <span class="wsh-section-title">Workspaces</span>
+        ${showActive ? `<button class="btn-primary wsh-btn-sm" onclick="_wshShowCreateForm()">\uFF0B New Workspace</button>` : ''}
       </div>
+
+      <div class="wsh-tabs" role="tablist">
+        <button class="wsh-tab${showActive ? ' wsh-tab-active' : ''}" onclick="_wshSwitchTab('active')" role="tab">Active ${active.length > 0 ? `<span class="wsh-tab-count">${active.length}</span>` : ''}</button>
+        <button class="wsh-tab${!showActive ? ' wsh-tab-active' : ''}" onclick="_wshSwitchTab('archived')" role="tab">Archived ${archived.length > 0 ? `<span class="wsh-tab-count wsh-tab-count-archived">${archived.length}</span>` : ''}</button>
+      </div>
+
       <div id="wshCreateForm" class="wsh-create-form hidden">
-        <input type="text" id="wshNewName" class="wsh-input" placeholder="Workspace name…" autocomplete="off" />
+        <input type="text" id="wshNewName" class="wsh-input" placeholder="Workspace name\u2026" autocomplete="off" />
         <div class="wsh-form-actions">
           <button class="btn-primary wsh-btn-sm" onclick="_wshSubmitCreate()">Create</button>
           <button class="btn-ghost wsh-btn-sm" onclick="_wshHideCreateForm()">Cancel</button>
         </div>
       </div>
-      ${workspaces.length === 0
-        ? `<p class="wsh-empty">No workspaces yet. Create one to start collaborating.</p>`
-        : workspaces.map(ws => {
-            const myRole = _wshMyRole(ws);
+
+      ${list.length === 0
+        ? `<p class="wsh-empty">${showActive
+            ? 'No active workspaces. Create one to start collaborating.'
+            : 'No archived workspaces.'}</p>`
+        : list.map(ws => {
+            const myRole   = _wshMyRole(ws);
             const roleInfo = _WSH_ROLES[myRole] || {};
+            if (!showActive) {
+              // Archived card
+              return `
+                <div class="wsh-workspace-card wsh-workspace-archived">
+                  <div class="wsh-ws-info">
+                    <div class="wsh-ws-name-row">
+                      <span class="wsh-ws-name">${esc(ws.name)}</span>
+                      <span class="wsh-archived-badge">\uD83D\uDDC4\uFE0F Archived</span>
+                    </div>
+                    <span class="wsh-ws-meta">Archived ${_wshFormatDate(ws.archivedAt)} &middot; ${ws.members.length} member${ws.members.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div class="wsh-ws-card-actions">
+                    <button class="btn-ghost wsh-btn-sm" onclick="_wshSubmitRestore('${ws.id}')" title="Restore workspace">\u21A9 Restore</button>
+                    <button class="wsh-delete-btn wsh-btn-sm" onclick="_wshSubmitDelete('${ws.id}')" title="Permanently delete">\uD83D\uDDD1 Delete</button>
+                  </div>
+                </div>`;
+            }
+            // Active card
             return `
-              <div class="wsh-workspace-card" onclick="_wshOpenWorkspace('${ws.id}')">
-                <div class="wsh-ws-info">
+              <div class="wsh-workspace-card">
+                <div class="wsh-ws-info" onclick="_wshOpenWorkspace('${ws.id}')" style="cursor:pointer;flex:1">
                   <span class="wsh-ws-name">${esc(ws.name)}</span>
                   <span class="wsh-ws-meta">${ws.members.length} member${ws.members.length !== 1 ? 's' : ''}</span>
                 </div>
-                <span class="wsh-role-badge wsh-role-${myRole}">${roleInfo.icon || ''} ${roleInfo.label || myRole}</span>
+                <div class="wsh-ws-card-actions">
+                  <span class="wsh-role-badge wsh-role-${myRole}">${roleInfo.icon || ''} ${roleInfo.label || myRole}</span>
+                  ${myRole === 'owner' ? `<button class="btn-ghost wsh-btn-sm" onclick="_wshSubmitArchive('${ws.id}')" title="Archive workspace">\uD83D\uDDC4\uFE0F Archive</button>` : ''}
+                </div>
               </div>`;
           }).join('')
       }
     </div>`;
+}
+
+function _wshSwitchTab(tab) {
+  _wshListTab = tab;
+  _wshRenderWorkspaceList();
 }
 
 /* ──────────────────────────────────────────────
@@ -255,27 +356,39 @@ function _wshRenderDetail(ws) {
   const container = document.getElementById('wshContent');
   if (!container) return;
 
-  const myRole   = _wshMyRole(ws);
+  const myRole    = _wshMyRole(ws);
   const canInvite = _wshCan(ws, 'canInvite');
   const canRevoke = _wshCan(ws, 'canRevoke');
+  const isOwner   = myRole === 'owner';
+  const isArchived = !!ws.archivedAt;
 
   container.innerHTML = `
     <div class="wsh-section">
       <div class="wsh-section-header">
         <button class="btn-ghost wsh-btn-sm" onclick="_wshRenderWorkspaceList()">← Back</button>
         <span class="wsh-section-title">${esc(ws.name)}</span>
+        ${isArchived ? `<span class="wsh-archived-badge">🗄\uFE0F Archived</span>` : ''}
         <span class="wsh-ws-id-badge" title="Workspace ID">${esc(ws.id)}</span>
       </div>
 
-      ${canInvite ? `
+      ${isOwner ? `
+      <div class="wsh-danger-zone">
+        ${!isArchived
+          ? `<button class="btn-ghost wsh-btn-sm" onclick="_wshSubmitArchive('${ws.id}')">🗄\uFE0F Archive Workspace</button>`
+          : `<button class="btn-ghost wsh-btn-sm" onclick="_wshSubmitRestore('${ws.id}')">↩ Restore Workspace</button>
+             <button class="wsh-delete-btn wsh-btn-sm" onclick="_wshSubmitDelete('${ws.id}')">🗑 Delete Permanently</button>`
+        }
+      </div>` : ''}
+
+      ${canInvite && !isArchived ? `
       <div class="wsh-invite-form">
         <h4 class="wsh-form-title">Invite a collaborator</h4>
         <div class="wsh-invite-row">
           <input type="email" id="wshInviteEmail" class="wsh-input" placeholder="artist@example.com" autocomplete="off" />
           <select id="wshInviteRole" class="wsh-select">
-            <option value="viewer">👁️ Viewer</option>
-            <option value="editor" selected>✏️ Editor</option>
-            <option value="admin">🛡️ Admin</option>
+            <option value="viewer">👁\uFE0F Viewer</option>
+            <option value="editor" selected>✏\uFE0F Editor</option>
+            <option value="admin">🛡\uFE0F Admin</option>
           </select>
           <button class="btn-primary wsh-btn-sm" onclick="_wshSubmitInvite('${ws.id}')">Send Invite</button>
         </div>
@@ -286,8 +399,8 @@ function _wshRenderDetail(ws) {
       <div class="wsh-members-list">
         ${ws.members.map(m => {
           const roleInfo = _WSH_ROLES[m.role] || {};
-          const isOwner  = m.role === 'owner';
-          const canAct   = canRevoke && !isOwner;
+          const isOwnerMember = m.role === 'owner';
+          const canAct = canRevoke && !isOwnerMember && !isArchived;
           return `
             <div class="wsh-member-row">
               <div class="wsh-member-avatar">${(m.email[0] || '?').toUpperCase()}</div>
@@ -298,9 +411,9 @@ function _wshRenderDetail(ws) {
               <div class="wsh-member-controls">
                 ${canAct ? `
                   <select class="wsh-select wsh-role-select" onchange="_wshSubmitRoleChange('${ws.id}','${esc(m.email)}',this.value)">
-                    <option value="viewer"  ${m.role === 'viewer'  ? 'selected' : ''}>👁️ Viewer</option>
-                    <option value="editor"  ${m.role === 'editor'  ? 'selected' : ''}>✏️ Editor</option>
-                    <option value="admin"   ${m.role === 'admin'   ? 'selected' : ''}>🛡️ Admin</option>
+                    <option value="viewer"  ${m.role === 'viewer'  ? 'selected' : ''}>👁\uFE0F Viewer</option>
+                    <option value="editor"  ${m.role === 'editor'  ? 'selected' : ''}>✏\uFE0F Editor</option>
+                    <option value="admin"   ${m.role === 'admin'   ? 'selected' : ''}>🛡\uFE0F Admin</option>
                   </select>
                   <button class="wsh-revoke-btn" onclick="_wshSubmitRevoke('${ws.id}','${esc(m.email)}')" title="Remove member">✕</button>
                 ` : `<span class="wsh-role-badge wsh-role-${m.role}">${roleInfo.icon || ''} ${roleInfo.label || m.role}</span>`}
@@ -314,6 +427,27 @@ function _wshRenderDetail(ws) {
 /* ──────────────────────────────────────────────
    UI Action Handlers
 ────────────────────────────────────────────── */
+
+function _wshSubmitArchive(wsId) {
+  const result = wshArchive(wsId);
+  showToast(result.message);
+  if (result.ok) _wshRenderWorkspaceList();
+}
+
+function _wshSubmitRestore(wsId) {
+  const result = wshRestore(wsId);
+  showToast(result.message);
+  if (result.ok) { _wshListTab = 'active'; _wshRenderWorkspaceList(); }
+}
+
+function _wshSubmitDelete(wsId) {
+  const ws = wshGetWorkspace(wsId);
+  if (!ws) return;
+  if (!confirm(`Permanently delete "${ws.name}"? This cannot be undone.`)) return;
+  const result = wshDeletePermanently(wsId);
+  showToast(result.message);
+  if (result.ok) _wshRenderWorkspaceList();
+}
 
 function _wshShowCreateForm() {
   const form = document.getElementById('wshCreateForm');
