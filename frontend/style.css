@@ -7371,3 +7371,94 @@ body.focus-mode #artText {
   gap: .3rem;
   flex-wrap: wrap;
 }
+
+/* ═══════════════════════════════════════════════════════
+   Workspace Activity Timeline  (Feature #44)
+═══════════════════════════════════════════════════════ */
+
+/* Sub-tabs inside the detail view (Members / Timeline) */
+.wsh-detail-tabs {
+  display: flex;
+  gap: .3rem;
+  border-bottom: 1px solid var(--border, #2a2d4a);
+  padding-bottom: .4rem;
+  margin-bottom: .75rem;
+}
+
+/* Filter row */
+.wsh-tl-filter-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
+}
+.wsh-tl-filter-label {
+  font-size: .8rem;
+  color: var(--text-dim, #8892b0);
+  white-space: nowrap;
+}
+
+/* Timeline list */
+.wsh-tl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* Individual event row */
+.wsh-tl-item {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .55rem 0;
+  border-bottom: 1px solid var(--border, #2a2d4a);
+  position: relative;
+}
+.wsh-tl-item:last-child { border-bottom: none; }
+
+/* Vertical connector line */
+.wsh-tl-list .wsh-tl-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: .85rem;
+  top: 2rem;
+  bottom: -.55rem;
+  width: 1px;
+  background: var(--border, #2a2d4a);
+}
+
+.wsh-tl-icon {
+  font-size: 1rem;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: var(--surface-2, #1a1d35);
+  border: 1px solid var(--border, #2a2d4a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.wsh-tl-body {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  min-width: 0;
+  padding-top: .15rem;
+}
+.wsh-tl-detail {
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--text, #e2e8f4);
+  word-break: break-word;
+}
+.wsh-tl-meta {
+  font-size: .72rem;
+  color: var(--text-dim, #8892b0);
+}

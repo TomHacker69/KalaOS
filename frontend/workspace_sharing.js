@@ -44,6 +44,59 @@ function _wshCurrentUserEmail() {
 }
 
 /* ──────────────────────────────────────────────
+   Activity Timeline
+────────────────────────────────────────────── */
+
+const _WSH_ACTIVITY_KEY  = 'kala-ws-activity';
+const _WSH_MAX_EVENTS    = 200; // per workspace
+
+// Event type metadata: icon + human label
+const _WSH_EVENT_META = {
+  created:      { icon: '✨', label: 'Workspace created' },
+  archived:     { icon: '🗄️', label: 'Workspace archived' },
+  restored:     { icon: '↩', label: 'Workspace restored' },
+  deleted:      { icon: '🗑', label: 'Workspace deleted' },
+  duplicated:   { icon: '⧉', label: 'Workspace duplicated' },
+  member_added: { icon: '👤➕', label: 'Member invited' },
+  role_changed: { icon: '🔄', label: 'Role changed' },
+  member_removed:{ icon: '👤➖', label: 'Member removed' },
+  imported:     { icon: '⬇', label: 'Workspace imported' },
+};
+
+function _wshLoadActivity() {
+  try { return JSON.parse(localStorage.getItem(_WSH_ACTIVITY_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function _wshSaveActivity(log) {
+  localStorage.setItem(_WSH_ACTIVITY_KEY, JSON.stringify(log));
+}
+
+/**
+ * Append an event to a workspace's activity log.
+ * @param {string} wsId
+ * @param {string} type  - key from _WSH_EVENT_META
+ * @param {string} detail - human-readable description
+ */
+function _wshLogEvent(wsId, type, detail) {
+  const log = _wshLoadActivity();
+  if (!log[wsId]) log[wsId] = [];
+  log[wsId].push({ type, detail, actor: _wshCurrentUserEmail() || 'unknown', ts: Date.now() });
+  if (log[wsId].length > _WSH_MAX_EVENTS) log[wsId].shift();
+  _wshSaveActivity(log);
+}
+
+/**
+ * Return the activity log for a workspace, newest first.
+ * @param {string} wsId
+ * @returns {object[]}
+ */
+function wshGetTimeline(wsId) {
+  const log = _wshLoadActivity();
+  return (log[wsId] || []).slice().reverse();
+}
+
+/* ──────────────────────────────────────────────
    Workspace CRUD
 ────────────────────────────────────────────── */
 
@@ -65,6 +118,7 @@ function wshCreateWorkspace(name) {
   const all = _wshLoad();
   all.push(ws);
   _wshSave(all);
+  _wshLogEvent(ws.id, 'created', `Workspace "${ws.name}" created.`);
   return ws;
 }
 
@@ -113,6 +167,7 @@ function wshArchive(wsId) {
   if (ws.archivedAt) return { ok: false, message: 'Workspace is already archived.' };
   ws.archivedAt = Date.now();
   _wshSave(all);
+  _wshLogEvent(wsId, 'archived', `Workspace archived.`);
   return { ok: true, message: `"${ws.name}" archived.` };
 }
 
@@ -129,6 +184,7 @@ function wshRestore(wsId) {
   if (!ws.archivedAt) return { ok: false, message: 'Workspace is not archived.' };
   ws.archivedAt = null;
   _wshSave(all);
+  _wshLogEvent(wsId, 'restored', `Workspace restored.`);
   return { ok: true, message: `"${ws.name}" restored.` };
 }
 
@@ -145,6 +201,7 @@ function wshDeletePermanently(wsId) {
   if (!ws.archivedAt) return { ok: false, message: 'Archive the workspace before deleting it permanently.' };
   const updated = all.filter(w => w.id !== wsId);
   _wshSave(updated);
+  _wshLogEvent(wsId, 'deleted', `Workspace "${ws.name}" permanently deleted.`);
   return { ok: true, message: `"${ws.name}" permanently deleted.` };
 }
 
@@ -184,6 +241,7 @@ function wshDuplicateWorkspace(wsId, newName) {
   const all = _wshLoad();
   all.push(copy);
   _wshSave(all);
+  _wshLogEvent(copy.id, 'duplicated', `Duplicated from workspace ${wsId}.`);
   return { ok: true, message: `"${copy.name}" created as a duplicate.`, workspace: copy };
 }
 
@@ -232,6 +290,7 @@ function wshInvite(wsId, inviteeEmail, role) {
   }
   ws.members.push({ email, role, joinedAt: Date.now() });
   _wshSave(all);
+  _wshLogEvent(wsId, 'member_added', `${email} invited as ${_WSH_ROLES[role].label}.`);
   return { ok: true, message: `${email} invited as ${_WSH_ROLES[role].label}.` };
 }
 
@@ -256,6 +315,7 @@ function wshChangeRole(wsId, targetEmail, newRole) {
   if (member.role === 'owner') return { ok: false, message: 'Cannot change the owner\'s role.' };
   member.role = newRole;
   _wshSave(all);
+  _wshLogEvent(wsId, 'role_changed', `${targetEmail} role changed to ${_WSH_ROLES[newRole].label}.`);
   return { ok: true, message: `Role updated to ${_WSH_ROLES[newRole].label}.` };
 }
 
@@ -276,6 +336,7 @@ function wshRevoke(wsId, targetEmail) {
   if (member.role === 'owner') return { ok: false, message: 'Cannot remove the workspace owner.' };
   ws.members = ws.members.filter(m => m.email !== targetEmail);
   _wshSave(all);
+  _wshLogEvent(wsId, 'member_removed', `${targetEmail} removed from workspace.`);
   return { ok: true, message: `${targetEmail} removed from workspace.` };
 }
 
@@ -463,17 +524,92 @@ function _wshRenderDetail(ws) {
               <div class="wsh-member-controls">
                 ${canAct ? `
                   <select class="wsh-select wsh-role-select" onchange="_wshSubmitRoleChange('${ws.id}','${esc(m.email)}',this.value)">
-                    <option value="viewer"  ${m.role === 'viewer'  ? 'selected' : ''}>👁\uFE0F Viewer</option>
-                    <option value="editor"  ${m.role === 'editor'  ? 'selected' : ''}>✏\uFE0F Editor</option>
-                    <option value="admin"   ${m.role === 'admin'   ? 'selected' : ''}>🛡\uFE0F Admin</option>
+                    <option value="viewer"  ${m.role === 'viewer'  ? 'selected' : ''}>\uD83D\uDC41\uFE0F Viewer</option>
+                    <option value="editor"  ${m.role === 'editor'  ? 'selected' : ''}>\u270F\uFE0F Editor</option>
+                    <option value="admin"   ${m.role === 'admin'   ? 'selected' : ''}>\uD83D\uDEE1\uFE0F Admin</option>
                   </select>
-                  <button class="wsh-revoke-btn" onclick="_wshSubmitRevoke('${ws.id}','${esc(m.email)}')" title="Remove member">✕</button>
+                  <button class="wsh-revoke-btn" onclick="_wshSubmitRevoke('${ws.id}','${esc(m.email)}')" title="Remove member">\u2715</button>
                 ` : `<span class="wsh-role-badge wsh-role-${m.role}">${roleInfo.icon || ''} ${roleInfo.label || m.role}</span>`}
               </div>
             </div>`;
         }).join('')}
       </div>
+
+      <div class="wsh-detail-tabs" role="tablist" style="margin-top:1.1rem">
+        <button class="wsh-tab wsh-tab-active" id="wsh-dtab-members" onclick="_wshDetailTab('${ws.id}','members')" role="tab">Members</button>
+        <button class="wsh-tab" id="wsh-dtab-timeline" onclick="_wshDetailTab('${ws.id}','timeline')" role="tab">📅 Timeline</button>
+      </div>
+      <div id="wsh-detail-members-${ws.id}">
+        <!-- members list already rendered above, kept visible by default -->
+      </div>
+      <div id="wsh-detail-timeline-${ws.id}" class="hidden">
+        <div class="wsh-tl-filter-row">
+          <label class="wsh-tl-filter-label" for="wshTlFilter-${ws.id}">Filter:</label>
+          <select class="wsh-select" id="wshTlFilter-${ws.id}" onchange="_wshRenderTimeline('${ws.id}',this.value)">
+            <option value="all">All activity</option>
+            ${Object.entries(_WSH_EVENT_META).map(([k,v]) =>
+              `<option value="${k}">${v.icon} ${v.label}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div id="wsh-tl-list-${ws.id}" class="wsh-tl-list" aria-live="polite"></div>
+      </div>
     </div>`;
+}
+
+function _wshDetailTab(wsId, tab) {
+  const membersPane  = document.getElementById(`wsh-detail-members-${wsId}`);
+  const timelinePane = document.getElementById(`wsh-detail-timeline-${wsId}`);
+  const membersBtn   = document.getElementById('wsh-dtab-members');
+  const timelineBtn  = document.getElementById('wsh-dtab-timeline');
+  if (!membersPane || !timelinePane) return;
+  const showTimeline = tab === 'timeline';
+  membersPane.classList.toggle('hidden', showTimeline);
+  timelinePane.classList.toggle('hidden', !showTimeline);
+  membersBtn.classList.toggle('wsh-tab-active', !showTimeline);
+  timelineBtn.classList.toggle('wsh-tab-active', showTimeline);
+  if (showTimeline) _wshRenderTimeline(wsId, 'all');
+}
+
+function _wshRenderTimeline(wsId, filter) {
+  const list = document.getElementById(`wsh-tl-list-${wsId}`);
+  if (!list) return;
+  let events = wshGetTimeline(wsId);
+  if (filter && filter !== 'all') events = events.filter(e => e.type === filter);
+
+  // Seed creation event from workspace data if log is empty
+  if (events.length === 0 && filter === 'all') {
+    const ws = wshGetWorkspace(wsId);
+    if (ws) {
+      list.innerHTML = `
+        <div class="wsh-tl-item">
+          <span class="wsh-tl-icon">✨</span>
+          <div class="wsh-tl-body">
+            <span class="wsh-tl-detail">Workspace created</span>
+            <span class="wsh-tl-meta">${_wshFormatDateTime(ws.createdAt)}</span>
+          </div>
+        </div>`;
+      return;
+    }
+  }
+
+  if (events.length === 0) {
+    list.innerHTML = `<p class="wsh-empty">No activity recorded${filter !== 'all' ? ' for this filter' : ''}.</p>`;
+    return;
+  }
+
+  list.innerHTML = events.map(e => {
+    const meta = _WSH_EVENT_META[e.type] || { icon: '•', label: e.type };
+    return `
+      <div class="wsh-tl-item">
+        <span class="wsh-tl-icon" title="${esc(meta.label)}">${meta.icon}</span>
+        <div class="wsh-tl-body">
+          <span class="wsh-tl-detail">${esc(e.detail)}</span>
+          <span class="wsh-tl-meta">${esc(e.actor)} &middot; ${_wshFormatDateTime(e.ts)}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
 }
 
 /* ──────────────────────────────────────────────
@@ -811,4 +947,9 @@ function _wshDownloadJson(data, filename) {
 function _wshFormatDate(ts) {
   if (!ts) return '—';
   return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function _wshFormatDateTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
