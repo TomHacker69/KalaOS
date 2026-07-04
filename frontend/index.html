@@ -378,6 +378,10 @@
 
         <!-- Shortcuts & Transform -->
         <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" onclick="openWorkspaceSharing()" title="Workspace Sharing" aria-label="Workspace Sharing">
+          <span class="sidebar-icon" aria-hidden="true">🔐</span>
+          <span class="sidebar-label">Sharing</span>
+        </button>
         <button class="sidebar-btn" onclick="openShortcutManager()" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts">
           <span class="sidebar-icon" aria-hidden="true">⌨️</span>
           <span class="sidebar-label">Shortcuts</span>
@@ -2992,6 +2996,17 @@
 
   </div><!-- /app-body -->
 
+  <!-- Workspace Sharing Panel -->
+  <div id="wshPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Workspace Sharing" onclick="if(event.target===this)closeWorkspaceSharing()">
+    <div class="wsh-modal">
+      <div class="wsh-modal-header">
+        <span class="wsh-modal-title">🔐 Workspace Sharing</span>
+        <button class="btn-icon-round" onclick="closeWorkspaceSharing()" aria-label="Close">✕</button>
+      </div>
+      <div id="wshContent"></div>
+    </div>
+  </div>
+
   <!-- Keyboard Shortcut Manager Panel -->
   <div id="ksPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Keyboard Shortcut Manager" onclick="if(event.target===this)closeShortcutManager()">
     <div class="ks-modal">
@@ -3125,6 +3140,7 @@
 <script src="app.js"></script>
 <script src="templates.js"></script>
 <script src="workspace_suggestions.js"></script>
+<script src="workspace_sharing.js"></script>
 <script src="keyboard_shortcuts.js"></script>
 </body>
 </html>
