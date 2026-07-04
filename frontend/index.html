@@ -378,6 +378,10 @@
 
         <!-- Shortcuts & Transform -->
         <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" onclick="openWorkspaceSearch()" title="Search Workspaces (Ctrl+K)" aria-label="Search Workspaces">
+          <span class="sidebar-icon" aria-hidden="true">🔍</span>
+          <span class="sidebar-label">Search</span>
+        </button>
         <button class="sidebar-btn" onclick="openWorkspaceRecommendations()" title="Workspace Recommendations" aria-label="Workspace Recommendations">
           <span class="sidebar-icon" aria-hidden="true">✨</span>
           <span class="sidebar-label">Recommendations</span>
@@ -3012,6 +3016,22 @@
 
   </div><!-- /app-body -->
 
+  <!-- Global Workspace Search Panel -->
+  <div id="wssPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Search Workspaces" onclick="if(event.target===this)closeWorkspaceSearch()">
+    <div class="wss-modal">
+      <div class="wss-modal-header">
+        <span class="wss-modal-icon" aria-hidden="true">🔍</span>
+        <input type="search" id="wssInput" class="wss-input" placeholder="Search by name, tags, or description…"
+          autocomplete="off" aria-label="Search workspaces"
+          oninput="_wssOnInput(this.value)"
+          onkeydown="_wssOnKeydown(event)" />
+        <button class="btn-icon-round" onclick="closeWorkspaceSearch()" aria-label="Close">✕</button>
+      </div>
+      <div id="wssList" class="wss-list" aria-live="polite" role="listbox"></div>
+      <div class="wss-footer">↑↓ navigate &nbsp;·&nbsp; Enter to open &nbsp;·&nbsp; Esc to close &nbsp;·&nbsp; <kbd>Ctrl+K</kbd> to toggle</div>
+    </div>
+  </div>
+
   <!-- Workspace Recommendations Panel -->
   <div id="wsRecPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Workspace Recommendations" onclick="if(event.target===this)closeWorkspaceRecommendations()">
     <div class="wsrec-modal">
@@ -3172,6 +3192,7 @@
 <script src="templates.js"></script>
 <script src="workspace_suggestions.js"></script>
 <script src="workspace_sharing.js"></script>
+<script src="workspace_search.js"></script>
 <script src="keyboard_shortcuts.js"></script>
 </body>
 </html>
