@@ -378,6 +378,10 @@
 
         <!-- Shortcuts & Transform -->
         <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" onclick="openWorkspaceAnalytics()" title="Workspace Analytics" aria-label="Workspace Analytics">
+          <span class="sidebar-icon" aria-hidden="true">📊</span>
+          <span class="sidebar-label">Analytics</span>
+        </button>
         <button class="sidebar-btn" onclick="openWorkspaceSearch()" title="Search Workspaces (Ctrl+K)" aria-label="Search Workspaces">
           <span class="sidebar-icon" aria-hidden="true">🔍</span>
           <span class="sidebar-label">Search</span>
@@ -3016,6 +3020,17 @@
 
   </div><!-- /app-body -->
 
+  <!-- Workspace Analytics Panel -->
+  <div id="wsaPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Workspace Analytics" onclick="if(event.target===this)closeWorkspaceAnalytics()">
+    <div class="wsa-modal">
+      <div class="wsa-modal-header">
+        <span class="wsa-modal-title">📊 Workspace Analytics</span>
+        <button class="btn-icon-round" onclick="closeWorkspaceAnalytics()" aria-label="Close">✕</button>
+      </div>
+      <div id="wsaContent" class="wsa-content"></div>
+    </div>
+  </div>
+
   <!-- Global Workspace Search Panel -->
   <div id="wssPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Search Workspaces" onclick="if(event.target===this)closeWorkspaceSearch()">
     <div class="wss-modal">
@@ -3192,6 +3207,7 @@
 <script src="templates.js"></script>
 <script src="workspace_suggestions.js"></script>
 <script src="workspace_sharing.js"></script>
+<script src="workspace_analytics.js"></script>
 <script src="workspace_search.js"></script>
 <script src="keyboard_shortcuts.js"></script>
 </body>
