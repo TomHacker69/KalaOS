@@ -7345,3 +7345,29 @@ body.focus-mode #artText {
 .wsh-import-status.hidden { display: none; }
 .wsh-import-ok  { background: rgba(74,222,128,.1);  color: #4ade80; border: 1px solid rgba(74,222,128,.25); }
 .wsh-import-err { background: rgba(226,50,112,.1);  color: var(--error, #e23270); border: 1px solid rgba(226,50,112,.25); }
+
+/* ═══════════════════════════════════════════════════════
+   Workspace Duplication  (Feature #45)
+═══════════════════════════════════════════════════════ */
+
+/* Inline rename form that expands below the card action row */
+.wsh-dup-form {
+  width: 100%;
+  margin-top: .55rem;
+  padding-top: .55rem;
+  border-top: 1px solid var(--border, #2a2d4a);
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+.wsh-dup-form.hidden { display: none; }
+
+.wsh-dup-input { width: 100%; }
+
+/* "copy" meta badge on duplicated workspace cards */
+.wsh-workspace-card .wsh-ws-meta {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  flex-wrap: wrap;
+}

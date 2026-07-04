@@ -149,6 +149,45 @@ function wshDeletePermanently(wsId) {
 }
 
 /* ──────────────────────────────────────────────
+   Duplication
+────────────────────────────────────────────── */
+
+/**
+ * Duplicate a workspace the current user is a member of.
+ * The copy gets a fresh id, fresh timestamps, and the current user as sole owner.
+ * All other workspace settings (name, layout, config) are deep-copied.
+ * @param {string} wsId   - source workspace id
+ * @param {string} newName - name for the duplicate (defaults to "<original> (copy)")
+ * @returns {{ ok: boolean, message: string, workspace?: object }}
+ */
+function wshDuplicateWorkspace(wsId, newName) {
+  const email = _wshCurrentUserEmail();
+  if (!email) return { ok: false, message: 'Sign in to duplicate a workspace.' };
+  const source = wshGetWorkspace(wsId);
+  if (!source) return { ok: false, message: 'Workspace not found.' };
+
+  const name = (newName || '').trim() || `${source.name} (copy)`;
+
+  // Deep-copy all fields except identity/timestamp/archive fields
+  const { id: _id, createdAt: _c, archivedAt: _a, importedAt: _i, members: _m, name: _n, ...rest } = source;
+
+  const copy = {
+    ...rest,
+    id:         'ws_' + Date.now().toString(36),
+    name,
+    createdAt:  Date.now(),
+    archivedAt: null,
+    duplicatedFrom: wsId,
+    members:    [{ email, role: 'owner', joinedAt: Date.now() }],
+  };
+
+  const all = _wshLoad();
+  all.push(copy);
+  _wshSave(all);
+  return { ok: true, message: `"${copy.name}" created as a duplicate.`, workspace: copy };
+}
+
+/* ──────────────────────────────────────────────
    Permission Helpers
 ────────────────────────────────────────────── */
 
@@ -322,14 +361,25 @@ function _wshRenderWorkspaceList() {
             }
             // Active card
             return `
-              <div class="wsh-workspace-card">
+              <div class="wsh-workspace-card" id="wsh-card-${ws.id}">
                 <div class="wsh-ws-info" onclick="_wshOpenWorkspace('${ws.id}')" style="cursor:pointer;flex:1">
                   <span class="wsh-ws-name">${esc(ws.name)}</span>
-                  <span class="wsh-ws-meta">${ws.members.length} member${ws.members.length !== 1 ? 's' : ''}</span>
+                  <span class="wsh-ws-meta">${ws.members.length} member${ws.members.length !== 1 ? 's' : ''}${ws.duplicatedFrom ? ' · ⧉ copy' : ''}</span>
                 </div>
                 <div class="wsh-ws-card-actions">
                   <span class="wsh-role-badge wsh-role-${myRole}">${roleInfo.icon || ''} ${roleInfo.label || myRole}</span>
+                  <button class="btn-ghost wsh-btn-sm" onclick="_wshShowDuplicateForm('${ws.id}')" title="Duplicate workspace">⧉ Duplicate</button>
                   ${myRole === 'owner' ? `<button class="btn-ghost wsh-btn-sm" onclick="_wshSubmitArchive('${ws.id}')" title="Archive workspace">\uD83D\uDDC4\uFE0F Archive</button>` : ''}
+                </div>
+                <div class="wsh-dup-form hidden" id="wsh-dup-${ws.id}">
+                  <input type="text" class="wsh-input wsh-dup-input" id="wsh-dup-name-${ws.id}"
+                    placeholder="${esc(ws.name)} (copy)"
+                    value="${esc(ws.name)} (copy)"
+                    autocomplete="off" />
+                  <div class="wsh-form-actions">
+                    <button class="btn-primary wsh-btn-sm" onclick="_wshSubmitDuplicate('${ws.id}')">Create Copy</button>
+                    <button class="btn-ghost wsh-btn-sm" onclick="_wshHideDuplicateForm('${ws.id}')">Cancel</button>
+                  </div>
                 </div>
               </div>`;
           }).join('')
@@ -447,6 +497,29 @@ function _wshSubmitDelete(wsId) {
   if (!ws) return;
   if (!confirm(`Permanently delete "${ws.name}"? This cannot be undone.`)) return;
   const result = wshDeletePermanently(wsId);
+  showToast(result.message);
+  if (result.ok) _wshRenderWorkspaceList();
+}
+
+function _wshShowDuplicateForm(wsId) {
+  const form  = document.getElementById(`wsh-dup-${wsId}`);
+  const input = document.getElementById(`wsh-dup-name-${wsId}`);
+  if (!form) return;
+  // Close any other open duplicate forms first
+  document.querySelectorAll('.wsh-dup-form').forEach(f => f.classList.add('hidden'));
+  form.classList.remove('hidden');
+  input?.focus();
+  input?.select();
+}
+
+function _wshHideDuplicateForm(wsId) {
+  document.getElementById(`wsh-dup-${wsId}`)?.classList.add('hidden');
+}
+
+function _wshSubmitDuplicate(wsId) {
+  const input   = document.getElementById(`wsh-dup-name-${wsId}`);
+  const newName = (input?.value || '').trim();
+  const result  = wshDuplicateWorkspace(wsId, newName);
   showToast(result.message);
   if (result.ok) _wshRenderWorkspaceList();
 }
