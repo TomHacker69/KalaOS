@@ -371,6 +371,10 @@
           <span class="sidebar-icon" aria-hidden="true">📐</span>
           <span class="sidebar-label">Templates</span>
         </button>
+        <button class="sidebar-btn" onclick="openWorkspaceSuggestions()" title="AI Workspace Suggestions" aria-label="AI Workspace Suggestions">
+          <span class="sidebar-icon" aria-hidden="true">🧠</span>
+          <span class="sidebar-label">AI Suggestions</span>
+        </button>
 
         <!-- Transform -->
         <div class="sidebar-divider"></div>
@@ -397,6 +401,11 @@
           <p class="dashboard-greeting" id="dashboardGreeting">Good day, Artist</p>
           <h1 class="dashboard-title">Welcome to KalaOS Studio</h1>
           <p class="dashboard-subtitle">Your AI-native creative workspace. Pick a studio and start making something extraordinary.</p>
+          <div style="margin-top:1.2rem">
+            <button class="btn-primary" onclick="openWorkspaceSuggestions()" style="font-size:.85rem;padding:.5rem 1.1rem">
+              🧠 AI Workspace Suggestions
+            </button>
+          </div>
         </div>
 
         <div class="dashboard-stats" id="dashboardStats">
@@ -2979,6 +2988,21 @@
 
   </div><!-- /app-body -->
 
+  <!-- AI Workspace Suggestions Panel -->
+  <div id="wsSuggestionsPanel" class="ws-suggestions-overlay hidden" role="dialog" aria-modal="true" aria-label="AI Workspace Suggestions" onclick="if(event.target===this)closeWorkspaceSuggestions()">
+    <div class="ws-suggestions-panel">
+      <div class="ws-suggestions-header">
+        <span class="ws-suggestions-title">🧠 AI Workspace Suggestions</span>
+        <button class="btn-icon-round" onclick="closeWorkspaceSuggestions()" aria-label="Close suggestions">✕</button>
+      </div>
+      <p class="ws-suggestions-hint">Personalised tips based on how you use KalaOS. Apply or dismiss each one individually.</p>
+      <div id="wsSuggestionsList" class="ws-suggestions-list" aria-live="polite"></div>
+      <div class="ws-suggestions-footer">
+        <button class="btn-ghost small" onclick="wsResetDismissed()" title="Restore dismissed suggestions">↺ Reset dismissed</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Template Preview Modal -->
   <div id="templatePreviewModal" class="template-preview-modal hidden" role="dialog" aria-modal="true" aria-label="Template Preview">
     <div class="template-preview-card">
@@ -3082,5 +3106,6 @@
 <script src="session-restore.js"></script>
 <script src="app.js"></script>
 <script src="templates.js"></script>
+<script src="workspace_suggestions.js"></script>
 </body>
 </html>
