@@ -285,6 +285,7 @@ function _wshRenderWorkspaceList() {
       <div class="wsh-tabs" role="tablist">
         <button class="wsh-tab${showActive ? ' wsh-tab-active' : ''}" onclick="_wshSwitchTab('active')" role="tab">Active ${active.length > 0 ? `<span class="wsh-tab-count">${active.length}</span>` : ''}</button>
         <button class="wsh-tab${!showActive ? ' wsh-tab-active' : ''}" onclick="_wshSwitchTab('archived')" role="tab">Archived ${archived.length > 0 ? `<span class="wsh-tab-count wsh-tab-count-archived">${archived.length}</span>` : ''}</button>
+        <button class="wsh-tab" onclick="_wshSwitchTab('import-export')" role="tab">↕ Import / Export</button>
       </div>
 
       <div id="wshCreateForm" class="wsh-create-form hidden">
@@ -338,6 +339,7 @@ function _wshRenderWorkspaceList() {
 
 function _wshSwitchTab(tab) {
   _wshListTab = tab;
+  if (tab === 'import-export') { _wshRenderImportExport(); return; }
   _wshRenderWorkspaceList();
 }
 
@@ -508,8 +510,230 @@ function _wshSubmitRevoke(wsId, targetEmail) {
 }
 
 /* ──────────────────────────────────────────────
+   Import / Export
+────────────────────────────────────────────── */
+
+const _WSH_EXPORT_VERSION = 1;
+
+/**
+ * Export a single workspace as a downloaded JSON file.
+ * @param {string} wsId
+ */
+function wshExportOne(wsId) {
+  const ws = wshGetWorkspace(wsId);
+  if (!ws) { showToast('Workspace not found.'); return; }
+  _wshDownloadJson(
+    { version: _WSH_EXPORT_VERSION, exportedAt: Date.now(), workspaces: [ws] },
+    `kalaos-workspace-${ws.id}.json`
+  );
+  showToast(`"${ws.name}" exported.`);
+}
+
+/**
+ * Export all workspaces the current user owns as a single JSON bundle.
+ */
+function wshExportAll() {
+  const email = _wshCurrentUserEmail();
+  if (!email) { showToast('Sign in to export workspaces.'); return; }
+  const owned = _wshLoad().filter(ws => ws.members.some(m => m.email === email && m.role === 'owner'));
+  if (owned.length === 0) { showToast('No workspaces to export.'); return; }
+  _wshDownloadJson(
+    { version: _WSH_EXPORT_VERSION, exportedAt: Date.now(), workspaces: owned },
+    `kalaos-workspaces-${Date.now()}.json`
+  );
+  showToast(`${owned.length} workspace${owned.length !== 1 ? 's' : ''} exported.`);
+}
+
+/**
+ * Validate a parsed import payload.
+ * @param {any} data
+ * @returns {{ ok: boolean, errors: string[], workspaces: object[] }}
+ */
+function wshValidateImport(data) {
+  const errors = [];
+  if (!data || typeof data !== 'object') {
+    return { ok: false, errors: ['File is not a valid JSON object.'], workspaces: [] };
+  }
+  if (data.version !== _WSH_EXPORT_VERSION) {
+    errors.push(`Unsupported export version: ${data.version ?? 'missing'}. Expected ${_WSH_EXPORT_VERSION}.`);
+  }
+  if (!Array.isArray(data.workspaces) || data.workspaces.length === 0) {
+    errors.push('No workspaces array found in file.');
+    return { ok: false, errors, workspaces: [] };
+  }
+  const valid = [];
+  data.workspaces.forEach((ws, i) => {
+    const prefix = `Workspace #${i + 1}`;
+    if (typeof ws.id !== 'string' || !ws.id.startsWith('ws_')) {
+      errors.push(`${prefix}: missing or invalid id.`); return;
+    }
+    if (typeof ws.name !== 'string' || !ws.name.trim()) {
+      errors.push(`${prefix}: missing name.`); return;
+    }
+    if (!Array.isArray(ws.members) || ws.members.length === 0) {
+      errors.push(`${prefix}: members array is empty or missing.`); return;
+    }
+    const hasOwner = ws.members.some(m => m.role === 'owner' && typeof m.email === 'string');
+    if (!hasOwner) {
+      errors.push(`${prefix}: no owner member found.`); return;
+    }
+    const invalidRole = ws.members.find(m => !_WSH_ROLES[m.role]);
+    if (invalidRole) {
+      errors.push(`${prefix}: member "${invalidRole.email}" has unknown role "${invalidRole.role}".`); return;
+    }
+    valid.push(ws);
+  });
+  return { ok: errors.length === 0, errors, workspaces: valid };
+}
+
+/**
+ * Import workspaces from a validated payload.
+ * Duplicate ids are skipped; name collisions get a " (imported)" suffix.
+ * @param {object[]} incoming  — validated workspace objects
+ * @returns {{ added: number, skipped: number }}
+ */
+function wshImportWorkspaces(incoming) {
+  const all    = _wshLoad();
+  const ids    = new Set(all.map(w => w.id));
+  const names  = new Set(all.map(w => w.name.toLowerCase()));
+  let added = 0, skipped = 0;
+  incoming.forEach(ws => {
+    if (ids.has(ws.id)) { skipped++; return; }
+    // Resolve name collision
+    let name = ws.name;
+    if (names.has(name.toLowerCase())) name = name + ' (imported)';
+    all.push({ ...ws, name, importedAt: Date.now() });
+    ids.add(ws.id);
+    names.add(name.toLowerCase());
+    added++;
+  });
+  _wshSave(all);
+  return { added, skipped };
+}
+
+/* ──────────────────────────────────────────────
+   Import / Export UI
+────────────────────────────────────────────── */
+
+function _wshRenderImportExport() {
+  const container = document.getElementById('wshContent');
+  if (!container) return;
+
+  const active   = wshMyWorkspaces();
+  const archived = wshArchivedWorkspaces();
+  const allOwned = _wshLoad().filter(ws => {
+    const email = _wshCurrentUserEmail();
+    return email && ws.members.some(m => m.email === email && m.role === 'owner');
+  });
+
+  container.innerHTML = `
+    <div class="wsh-section">
+      <div class="wsh-section-header">
+        <span class="wsh-section-title">Workspaces</span>
+      </div>
+
+      <div class="wsh-tabs" role="tablist">
+        <button class="wsh-tab" onclick="_wshSwitchTab('active')" role="tab">Active ${active.length > 0 ? `<span class="wsh-tab-count">${active.length}</span>` : ''}</button>
+        <button class="wsh-tab" onclick="_wshSwitchTab('archived')" role="tab">Archived ${archived.length > 0 ? `<span class="wsh-tab-count wsh-tab-count-archived">${archived.length}</span>` : ''}</button>
+        <button class="wsh-tab wsh-tab-active" role="tab">Import / Export</button>
+      </div>
+
+      <!-- Export section -->
+      <div class="wsh-ie-block">
+        <h4 class="wsh-form-title">Export</h4>
+        <p class="wsh-ie-hint">Download your workspace configurations as JSON. You can re-import them on any device.</p>
+        <div class="wsh-ie-actions">
+          <button class="btn-primary wsh-btn-sm" onclick="wshExportAll()" ${allOwned.length === 0 ? 'disabled' : ''}>⬇ Export All (${allOwned.length})</button>
+        </div>
+        ${allOwned.length > 0 ? `
+        <div class="wsh-ie-ws-list">
+          ${allOwned.map(ws => `
+            <div class="wsh-ie-ws-row">
+              <span class="wsh-ie-ws-name">${esc(ws.name)}</span>
+              <button class="btn-ghost wsh-btn-sm" onclick="wshExportOne('${ws.id}')">⬇ Export</button>
+            </div>`).join('')}
+        </div>` : ''}
+      </div>
+
+      <!-- Import section -->
+      <div class="wsh-ie-block">
+        <h4 class="wsh-form-title">Import</h4>
+        <p class="wsh-ie-hint">Select a previously exported <code>.json</code> file. Duplicate workspaces are skipped automatically.</p>
+        <div class="wsh-ie-drop-zone" id="wshDropZone"
+          onclick="document.getElementById('wshFileInput').click()"
+          ondragover="event.preventDefault();this.classList.add('wsh-drop-active')"
+          ondragleave="this.classList.remove('wsh-drop-active')"
+          ondrop="_wshHandleDrop(event)">
+          <span class="wsh-ie-drop-icon">📂</span>
+          <span class="wsh-ie-drop-label">Click or drag &amp; drop a <strong>.json</strong> file here</span>
+          <input type="file" id="wshFileInput" accept=".json,application/json" style="display:none" onchange="_wshHandleFileInput(this)" />
+        </div>
+        <div id="wshImportStatus" class="wsh-import-status hidden" aria-live="polite"></div>
+      </div>
+    </div>`;
+}
+
+function _wshHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('wshDropZone')?.classList.remove('wsh-drop-active');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) _wshProcessImportFile(file);
+}
+
+function _wshHandleFileInput(input) {
+  const file = input?.files?.[0];
+  if (file) _wshProcessImportFile(file);
+  input.value = '';
+}
+
+function _wshProcessImportFile(file) {
+  const status = document.getElementById('wshImportStatus');
+  if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+    _wshShowImportStatus(false, ['Only .json files are supported.']);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    let parsed;
+    try { parsed = JSON.parse(e.target.result); }
+    catch { _wshShowImportStatus(false, ['File contains invalid JSON.']); return; }
+    const { ok, errors, workspaces } = wshValidateImport(parsed);
+    if (!ok || workspaces.length === 0) {
+      _wshShowImportStatus(false, errors.length ? errors : ['No valid workspaces found in file.']);
+      return;
+    }
+    const { added, skipped } = wshImportWorkspaces(workspaces);
+    const msg = `${added} workspace${added !== 1 ? 's' : ''} imported${skipped > 0 ? `, ${skipped} skipped (already exist)` : ''}.`;
+    _wshShowImportStatus(true, [msg]);
+    showToast(msg);
+    // Refresh the export list to reflect newly imported workspaces
+    setTimeout(_wshRenderImportExport, 300);
+  };
+  reader.onerror = () => _wshShowImportStatus(false, ['Could not read file.']);
+  reader.readAsText(file);
+}
+
+function _wshShowImportStatus(ok, lines) {
+  const el = document.getElementById('wshImportStatus');
+  if (!el) return;
+  el.className = 'wsh-import-status ' + (ok ? 'wsh-import-ok' : 'wsh-import-err');
+  el.innerHTML = lines.map(l => `<div>${esc(l)}</div>`).join('');
+  el.classList.remove('hidden');
+}
+
+/* ──────────────────────────────────────────────
    Utility
 ────────────────────────────────────────────── */
+
+function _wshDownloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 function _wshFormatDate(ts) {
   if (!ts) return '—';
