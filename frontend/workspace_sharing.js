@@ -610,7 +610,6 @@ function _wshRenderTimeline(wsId, filter) {
       </div>`;
   }).join('');
 }
-}
 
 /* ──────────────────────────────────────────────
    UI Action Handlers
@@ -931,6 +930,242 @@ function _wshShowImportStatus(ok, lines) {
 }
 
 /* ──────────────────────────────────────────────
+   Smart Workspace Recommendation Engine  (#43)
+────────────────────────────────────────────── */
+
+const _WSH_REC_DISMISSED_KEY = 'kala-ws-rec-dismissed';
+
+/**
+ * Workspace template profiles. Each defines required/bonus studios and a
+ * scoring function that returns 0–1 based on the user’s visit frequency map.
+ */
+const _WSH_TEMPLATES = [
+  {
+    id: 'songwriter',
+    icon: '✍️',
+    title: 'Songwriter',
+    description: 'Optimised for writing lyrics and poetry, running deep analysis, and generating production plans from your words.',
+    studios: ['text', 'music'],
+    tags: ['lyrics', 'poetry', 'analysis'],
+    score(freq, wsCount) {
+      return (freq['text'] * 3 + freq['music']) / Math.max(1, Object.values(freq).reduce((a,b)=>a+b,0)) * 0.8
+           + (wsCount > 0 ? 0.2 : 0);
+    },
+  },
+  {
+    id: 'producer',
+    icon: '🎹',
+    title: 'Music Producer',
+    description: 'Beat sequencer, mixer, mastering chain, chord builder, and AI production planning — all in one focused layout.',
+    studios: ['music'],
+    tags: ['beats', 'mixing', 'mastering'],
+    score(freq) {
+      return (freq['music'] * 4) / Math.max(1, Object.values(freq).reduce((a,b)=>a+b,0));
+    },
+  },
+  {
+    id: 'visual-artist',
+    icon: '🎨',
+    title: 'Visual Artist',
+    description: 'Paint, sketch, photo editing, logo maker, and AI image generation — your complete visual creation suite.',
+    studios: ['visual'],
+    tags: ['painting', 'design', 'photo'],
+    score(freq) {
+      return (freq['visual'] * 4) / Math.max(1, Object.values(freq).reduce((a,b)=>a+b,0));
+    },
+  },
+  {
+    id: 'filmmaker',
+    icon: '🎬',
+    title: 'Filmmaker',
+    description: 'Video studio, animation planner, storyboard editor, and scene-based script generator for visual storytellers.',
+    studios: ['video', 'animation'],
+    tags: ['video', 'animation', 'storyboard'],
+    score(freq) {
+      return (freq['video'] * 2 + freq['animation'] * 2) / Math.max(1, Object.values(freq).reduce((a,b)=>a+b,0));
+    },
+  },
+  {
+    id: 'collaborator',
+    icon: '🤝',
+    title: 'Collaborator',
+    description: 'Shared workspaces, direct messages, home feed, and collab studio — built for artists who create together.',
+    studios: ['collab', 'dms', 'feed'],
+    tags: ['collab', 'team', 'sharing'],
+    score(freq, wsCount) {
+      return (freq['collab'] * 2 + freq['dms'] + freq['feed']) / Math.max(1, Object.values(freq).reduce((a,b)=>a+b,0)) * 0.7
+           + (wsCount > 1 ? 0.3 : 0);
+    },
+  },
+  {
+    id: 'streamer',
+    icon: '📡',
+    title: 'Live Streamer',
+    description: 'Stream setup, overlay designer, analytics dashboard, and platform connect — go live with confidence.',
+    studios: ['stream', 'platform-connect'],
+    tags: ['streaming', 'live', 'platforms'],
+    score(freq) {
+      return (freq['stream'] * 3 + freq['platform-connect']) / Math.max(1, Object.values(freq).reduce((a,b)=>a+b,0));
+    },
+  },
+  {
+    id: 'multi-creator',
+    icon: '✨',
+    title: 'Multi-Medium Creator',
+    description: 'Text, music, and visual studios side by side — for artists who move fluidly across creative disciplines.',
+    studios: ['text', 'music', 'visual'],
+    tags: ['all-in-one', 'creative', 'versatile'],
+    score(freq) {
+      const total = Math.max(1, Object.values(freq).reduce((a,b)=>a+b,0));
+      const spread = [freq['text'], freq['music'], freq['visual']].filter(v => v > 0).length;
+      return (spread / 3) * 0.6 + ((freq['text'] + freq['music'] + freq['visual']) / total) * 0.4;
+    },
+  },
+];
+
+/**
+ * Score all templates against current usage and return sorted recommendations.
+ * Dismissed ones are excluded unless forceAll=true.
+ * @param {boolean} forceAll
+ * @returns {object[]}  sorted by score desc, each with .score and .matchReason
+ */
+function wshGenerateRecommendations(forceAll = false) {
+  // Read studio visit frequency from workspace_suggestions.js storage
+  let freq = {};
+  try {
+    const usage = JSON.parse(localStorage.getItem('kala-workspace-usage') || '{}');
+    const visits = usage.visits || [];
+    const allStudios = ['text','music','visual','animation','video','chat','feed','dms',
+                        'profile','collab','stream','export','platform-connect'];
+    allStudios.forEach(s => { freq[s] = 0; });
+    visits.forEach(v => { if (freq[v.studio] !== undefined) freq[v.studio]++; });
+  } catch { freq = {}; }
+
+  const wsCount = wshMyWorkspaces().length;
+  const dismissed = forceAll ? [] :
+    JSON.parse(localStorage.getItem(_WSH_REC_DISMISSED_KEY) || '[]');
+
+  return _WSH_TEMPLATES
+    .filter(t => !dismissed.includes(t.id))
+    .map(t => {
+      const raw = Math.min(1, t.score(freq, wsCount));
+      // Build a human reason string
+      const topStudios = t.studios
+        .filter(s => freq[s] > 0)
+        .map(s => s.charAt(0).toUpperCase() + s.slice(1));
+      const matchReason = topStudios.length
+        ? `Based on your ${topStudios.join(' & ')} activity`
+        : 'Recommended for your creative profile';
+      return { ...t, score: raw, matchReason };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Dismiss a recommendation by id.
+ */
+function wshDismissRecommendation(id) {
+  const dismissed = JSON.parse(localStorage.getItem(_WSH_REC_DISMISSED_KEY) || '[]');
+  if (!dismissed.includes(id)) dismissed.push(id);
+  localStorage.setItem(_WSH_REC_DISMISSED_KEY, JSON.stringify(dismissed));
+}
+
+/**
+ * Reset all dismissed recommendations.
+ */
+function wshResetRecommendations() {
+  localStorage.removeItem(_WSH_REC_DISMISSED_KEY);
+}
+
+/* ──────────────────────────────────────────────
+   Recommendation UI
+────────────────────────────────────────────── */
+
+/**
+ * Render recommendation cards into any container by id.
+ * Called by the dashboard and by openWorkspaceRecommendations().
+ */
+function wshRenderRecommendations(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const recs = wshGenerateRecommendations();
+
+  if (recs.length === 0) {
+    container.innerHTML = `
+      <div class="wsrec-empty">
+        <span style="font-size:1.6rem">🎉</span>
+        <p>All recommendations dismissed. <button class="btn-ghost wsrec-reset-btn" onclick="wshResetRecommendations();wshRenderRecommendations('${containerId}')">Reset</button></p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = recs.map(r => {
+    const pct = Math.round(r.score * 100);
+    return `
+      <div class="wsrec-card" id="wsrec-${r.id}">
+        <button class="wsrec-dismiss" onclick="_wshDismissRec('${r.id}','${containerId}')" title="Dismiss" aria-label="Dismiss recommendation">✕</button>
+        <div class="wsrec-card-top">
+          <span class="wsrec-icon">${r.icon}</span>
+          <div class="wsrec-info">
+            <span class="wsrec-title">${esc(r.title)}</span>
+            <span class="wsrec-reason">${esc(r.matchReason)}</span>
+          </div>
+          <div class="wsrec-score-wrap" title="Match score">
+            <svg class="wsrec-ring" viewBox="0 0 36 36" aria-hidden="true">
+              <circle class="wsrec-ring-bg" cx="18" cy="18" r="15.9" />
+              <circle class="wsrec-ring-fill" cx="18" cy="18" r="15.9"
+                stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="25" />
+            </svg>
+            <span class="wsrec-score-label">${pct}%</span>
+          </div>
+        </div>
+        <p class="wsrec-desc">${esc(r.description)}</p>
+        <div class="wsrec-tags">${r.tags.map(t => `<span class="wsrec-tag">${esc(t)}</span>`).join('')}</div>
+        <div class="wsrec-actions">
+          ${r.studios.map(s => `<button class="btn-primary wsrec-open-btn" onclick="if(typeof switchStudio==='function')switchStudio('${s}')">▶ Open ${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
+          <button class="btn-ghost wsrec-dup-btn" onclick="_wshApplyTemplate('${r.id}')">⧉ Create Workspace</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function _wshDismissRec(id, containerId) {
+  wshDismissRecommendation(id);
+  const card = document.getElementById(`wsrec-${id}`);
+  if (card) {
+    card.style.transition = 'opacity .2s, transform .2s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(16px)';
+    setTimeout(() => { card.remove(); wshRenderRecommendations(containerId); }, 220);
+  }
+}
+
+function _wshApplyTemplate(templateId) {
+  const t = _WSH_TEMPLATES.find(x => x.id === templateId);
+  if (!t) return;
+  const result = wshCreateWorkspace(`${t.title} Workspace`);
+  if (result) {
+    showToast(`“${result.name}” created from ${t.title} template.`);
+    if (typeof openWorkspaceSharing === 'function') openWorkspaceSharing();
+  }
+}
+
+/**
+ * Open the standalone recommendations panel.
+ */
+function openWorkspaceRecommendations() {
+  const panel = document.getElementById('wsRecPanel');
+  if (!panel) return;
+  wshRenderRecommendations('wsRecList');
+  panel.classList.remove('hidden');
+}
+
+function closeWorkspaceRecommendations() {
+  document.getElementById('wsRecPanel')?.classList.add('hidden');
+}
+
+/* ──────────────────────────────────────────────
    Utility
 ────────────────────────────────────────────── */
 
@@ -953,3 +1188,13 @@ function _wshFormatDateTime(ts) {
   if (!ts) return '—';
   return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+
+/* ─────────────────────────────────────────────
+   Auto-render recommendations on dashboard load
+───────────────────────────────────────────── */
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Render inline dashboard recommendations once the DOM is ready.
+  // Wrapped in setTimeout so app.js auth flow completes first.
+  setTimeout(() => wshRenderRecommendations('wsRecDashList'), 800);
+});

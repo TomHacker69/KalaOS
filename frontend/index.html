@@ -378,6 +378,10 @@
 
         <!-- Shortcuts & Transform -->
         <div class="sidebar-divider"></div>
+        <button class="sidebar-btn" onclick="openWorkspaceRecommendations()" title="Workspace Recommendations" aria-label="Workspace Recommendations">
+          <span class="sidebar-icon" aria-hidden="true">✨</span>
+          <span class="sidebar-label">Recommendations</span>
+        </button>
         <button class="sidebar-btn" onclick="openWorkspaceSharing()" title="Workspace Sharing" aria-label="Workspace Sharing">
           <span class="sidebar-icon" aria-hidden="true">🔐</span>
           <span class="sidebar-label">Sharing</span>
@@ -409,11 +413,23 @@
           <p class="dashboard-greeting" id="dashboardGreeting">Good day, Artist</p>
           <h1 class="dashboard-title">Welcome to KalaOS Studio</h1>
           <p class="dashboard-subtitle">Your AI-native creative workspace. Pick a studio and start making something extraordinary.</p>
-          <div style="margin-top:1.2rem">
+          <div style="margin-top:.8rem;display:flex;gap:.6rem;flex-wrap:wrap">
             <button class="btn-primary" onclick="openWorkspaceSuggestions()" style="font-size:.85rem;padding:.5rem 1.1rem">
               🧠 AI Workspace Suggestions
             </button>
+            <button class="btn-ghost" onclick="openWorkspaceRecommendations()" style="font-size:.85rem;padding:.5rem 1.1rem">
+              ✨ Smart Recommendations
+            </button>
           </div>
+        </div>
+
+        <!-- Smart Workspace Recommendations (dashboard inline) -->
+        <div class="wsrec-dashboard-section">
+          <div class="wsrec-dashboard-header">
+            <span class="wsrec-dashboard-title">✨ Smart Workspace Recommendations</span>
+            <button class="btn-ghost" style="font-size:.75rem;padding:.25rem .55rem" onclick="wshRenderRecommendations('wsRecDashList')">&#8635; Refresh</button>
+          </div>
+          <div id="wsRecDashList" class="wsrec-list wsrec-list-inline"></div>
         </div>
 
         <div class="dashboard-stats" id="dashboardStats">
@@ -2995,6 +3011,21 @@
     </aside><!-- /appAiPanel -->
 
   </div><!-- /app-body -->
+
+  <!-- Workspace Recommendations Panel -->
+  <div id="wsRecPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Workspace Recommendations" onclick="if(event.target===this)closeWorkspaceRecommendations()">
+    <div class="wsrec-modal">
+      <div class="wsrec-modal-header">
+        <span class="wsrec-modal-title">✨ Smart Workspace Recommendations</span>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <button class="btn-ghost" style="font-size:.75rem;padding:.25rem .6rem" onclick="wshResetRecommendations();wshRenderRecommendations('wsRecList')">&#8635; Reset</button>
+          <button class="btn-icon-round" onclick="closeWorkspaceRecommendations()" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <p class="wsrec-modal-hint">Personalised workspace layouts based on your studio activity. Dismiss any you don’t need.</p>
+      <div id="wsRecList" class="wsrec-list"></div>
+    </div>
+  </div>
 
   <!-- Workspace Sharing Panel -->
   <div id="wshPanel" class="hidden" role="dialog" aria-modal="true" aria-label="Workspace Sharing" onclick="if(event.target===this)closeWorkspaceSharing()">
